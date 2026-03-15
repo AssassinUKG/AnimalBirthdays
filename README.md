@@ -12,6 +12,14 @@ A fun, friendly single-page web app for tracking and celebrating your pet's birt
 - 💾 Pets are saved in your browser's local storage — no account needed
 - 🎉 Special birthday banner when today is your pet's birthday
 
+## Screenshots
+
+### Empty state — add your first pet
+![Animal Birthdays empty state](https://github.com/user-attachments/assets/257fd150-f6d2-43c2-889c-a78b150acdd2)
+
+### Populated — pets, calendar & timeline
+![Animal Birthdays with pets, calendar and timeline](https://github.com/user-attachments/assets/1da327fa-c3df-4aa2-9f01-c66ec2d520aa)
+
 ## Live Site
 
 The app is automatically deployed to GitHub Pages on every push to `main`:

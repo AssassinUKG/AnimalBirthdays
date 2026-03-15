@@ -417,11 +417,11 @@ function renderCalendar(pets) {
         ev.className = `day-event ${type === 'actual' ? 'actual-birthday' : 'human-birthday'}`;
         const emoji = getAnimalEmoji(pet.animalType);
         if (type === 'actual') {
-          const ageLabel = humanAge === 0 ? '🎉' : `age ${humanAge}`;
+          const ageLabel = humanAge === 0 ? '🎉' : `${humanAge} animal yr${humanAge !== 1 ? 's' : ''}`;
           ev.textContent = `${emoji} ${pet.name} (${ageLabel})`;
           ev.title = humanAge === 0
             ? `${pet.name} was born!`
-            : `${pet.name} turns human age ${humanAge}!`;
+            : `${pet.name} turns ${humanAge} animal year${humanAge !== 1 ? 's' : ''} old!`;
         } else {
           ev.textContent = `${emoji} ${pet.name}`;
           ev.title = `${pet.name}'s human-equivalent birthday`;
@@ -565,7 +565,7 @@ function renderBirthdayTimeline(pets) {
 
       const icon = ev.isToday ? '🎉' : ev.isPast ? '✓' : '🎂';
       const dateStr = ev.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-      const ageLabel = ev.humanAge === 0 ? 'Born' : `Human Age ${ev.humanAge}`;
+      const ageLabel = ev.humanAge === 0 ? 'Born' : `${ev.humanAge} animal yr${ev.humanAge !== 1 ? 's' : ''}`;
       let badge = '';
       if (ev.isToday) badge = `<span class="timeline-badge today-badge">🎉 Today!</span>`;
       else if (ev.isNext) badge = `<span class="timeline-badge next">Next 🔔</span>`;

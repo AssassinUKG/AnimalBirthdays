@@ -81,6 +81,43 @@ function animalToHumanYears(animalType, animalAgeYears) {
 }
 
 /**
+ * Inverse of animalToHumanYears: given a human-equivalent age (integer),
+ * returns the animal age in fractional calendar years when that milestone is reached.
+ * This lets us compute the actual calendar date of each "animal birthday".
+ */
+function humanYearsToAnimalAge(animalType, humanAge) {
+  const H = Math.max(0, humanAge);
+  switch (animalType) {
+    case 'dog': {
+      if (H <= 15) return H / 15;
+      if (H <= 24) return 1 + (H - 15) / 9;
+      return 2 + (H - 24) / 5;
+    }
+    case 'cat': {
+      if (H <= 15) return H / 15;
+      if (H <= 24) return 1 + (H - 15) / 9;
+      return 2 + (H - 24) / 4;
+    }
+    case 'rabbit': {
+      if (H <= 12) return H / 12;
+      if (H <= 20) return 1 + (H - 12) / 8;
+      return 2 + (H - 20) / 5;
+    }
+    case 'hamster':    return H / 25;
+    case 'guinea-pig': return H / 10.5;
+    case 'gerbil':     return H / 14;
+    case 'rat':        return H / 30;
+    case 'mouse':      return H / 25;
+    case 'ferret':     return H / 12;
+    case 'parrot':     return H / 8;
+    case 'goldfish':   return H / 5;
+    case 'tortoise':   return H / 3;
+    case 'chinchilla': return H / 5.5;
+    default:           return H / 7;
+  }
+}
+
+/**
  * Given an animal's DOB and type, compute what date corresponds to a given
  * number of human years before today.
  * i.e., if a dog is 3 years old = 29 human years, the "human equivalent birthday"
@@ -281,30 +318,43 @@ function getGoogleCalendarURL(name, dob, animalType) {
 let calendarDate = new Date();
 
 function getBirthdaysForMonth(pets, year, month) {
-  // Returns an object: { [day]: [{pet, type: 'actual'|'human', ageYears}] }
+  // Returns an object: { [day]: [{pet, type: 'actual', humanAge}] }
   const map = {};
+  const MS_PER_YEAR = 365.25 * 24 * 3600 * 1000;
+
   pets.forEach(pet => {
     const dob = new Date(pet.dob);
-    const dobYear = dob.getFullYear();
-    const dobMonth = dob.getMonth();
-    const dobDay = dob.getDate();
+    dob.setHours(0, 0, 0, 0);
 
-    // Actual birthday: show in birth month for every year from birth year onwards
-    if (dobMonth === month && year >= dobYear) {
-      const d = dobDay;
+    // Show the "Born" event in the birth month/year
+    if (dob.getFullYear() === year && dob.getMonth() === month) {
+      const d = dob.getDate();
       if (!map[d]) map[d] = [];
-      const ageYears = year - dobYear;
-      map[d].push({ pet, type: 'actual', ageYears });
+      map[d].push({ pet, type: 'actual', humanAge: 0 });
     }
 
-    // Human equivalent birthday this month (recurring annually)
-    const humanBirthday = getHumanEquivalentBirthday(pet.animalType, pet.dob);
-    if (humanBirthday.getMonth() === month) {
-      const d = humanBirthday.getDate();
-      if (!map[d]) map[d] = [];
-      // Only add if not already a human birthday for same pet same day
-      const isDupe = map[d].some(e => e.pet.id === pet.id && e.type === 'human');
-      if (!isDupe) map[d].push({ pet, type: 'human', ageYears: null });
+    // Find all human-equivalent age milestones that fall in this month/year.
+    // Determine the maximum H to check based on animal age at end of displayed month.
+    const monthEnd = new Date(year, month + 1, 0);
+    monthEnd.setHours(23, 59, 59, 999);
+    if (monthEnd < dob) return; // month is entirely before birth
+
+    const monthEndAnimalAge = (monthEnd - dob) / MS_PER_YEAR;
+    const maxH = Math.ceil(animalToHumanYears(pet.animalType, monthEndAnimalAge)) + 1;
+
+    for (let H = 1; H <= maxH; H++) {
+      const animalAgeAtH = humanYearsToAnimalAge(pet.animalType, H);
+      const milestoneDate = new Date(dob.getTime() + animalAgeAtH * MS_PER_YEAR);
+      milestoneDate.setHours(0, 0, 0, 0);
+
+      if (milestoneDate.getFullYear() === year && milestoneDate.getMonth() === month) {
+        const d = milestoneDate.getDate();
+        if (!map[d]) map[d] = [];
+        const isDupe = map[d].some(e => e.pet.id === pet.id && e.humanAge === H);
+        if (!isDupe) {
+          map[d].push({ pet, type: 'actual', humanAge: H });
+        }
+      }
     }
   });
   return map;
@@ -362,16 +412,16 @@ function renderCalendar(pets) {
       eventsContainer.className = 'day-events';
 
       // Limit display to 3 events per day to avoid overflow
-      birthdayMap[d].slice(0, 3).forEach(({ pet, type, ageYears }) => {
+      birthdayMap[d].slice(0, 3).forEach(({ pet, type, humanAge }) => {
         const ev = document.createElement('div');
         ev.className = `day-event ${type === 'actual' ? 'actual-birthday' : 'human-birthday'}`;
         const emoji = getAnimalEmoji(pet.animalType);
         if (type === 'actual') {
-          const ageLabel = ageYears === 0 ? '🎉' : `${ageYears}yr`;
+          const ageLabel = humanAge === 0 ? '🎉' : `${humanAge} animal yr${humanAge !== 1 ? 's' : ''}`;
           ev.textContent = `${emoji} ${pet.name} (${ageLabel})`;
-          ev.title = ageYears === 0
+          ev.title = humanAge === 0
             ? `${pet.name} was born!`
-            : `${pet.name}'s ${ageYears}-year birthday!`;
+            : `${pet.name} turns ${humanAge} animal year${humanAge !== 1 ? 's' : ''} old!`;
         } else {
           ev.textContent = `${emoji} ${pet.name}`;
           ev.title = `${pet.name}'s human-equivalent birthday`;
@@ -407,30 +457,67 @@ function renderCalendar(pets) {
 }
 
 // ===== Birthday Timeline =====
+// Maximum number of past milestones shown in the timeline per pet (Born is always shown first)
+const TIMELINE_MAX_PAST = 5;
+
 /**
- * Returns an array of yearly birthday events for a pet from birth to today+1 year.
- * Each entry: { date, ageYears, humanYears, isPast, isToday, isNext }
+ * Returns an array of human-equivalent age milestone events for a pet,
+ * from birth up to the next 2 upcoming milestones.
+ * Each entry: { date, humanAge, isPast, isToday, isNext }
+ *
+ * Instead of showing one birthday per calendar year, this shows the actual
+ * calendar dates when the animal reaches each human-equivalent age milestone —
+ * so fast-aging animals (e.g. hamsters at 25×) correctly show multiple
+ * birthdays within a single calendar year.
+ *
+ * To keep the list readable, at most the last TIMELINE_MAX_PAST past milestones
+ * are included (the Born event is always first).
  */
 function getAnimalBirthdayTimeline(pet) {
   const dob = new Date(pet.dob);
+  dob.setHours(0, 0, 0, 0);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const dobYear = dob.getFullYear();
-  const currentYear = today.getFullYear();
 
-  const events = [];
-  // Show from birth year through current year + 1 (next upcoming)
-  for (let year = dobYear; year <= currentYear + 1; year++) {
-    const birthdayDate = new Date(year, dob.getMonth(), dob.getDate());
-    const ageYears = year - dobYear;
-    const humanYears = Math.round(animalToHumanYears(pet.animalType, ageYears));
-    const isToday = birthdayDate.getTime() === today.getTime();
-    const isPast = birthdayDate < today && !isToday;
-    const isNext = !isPast && !isToday && year === currentYear + 1;
+  const MS_PER_YEAR = 365.25 * 24 * 3600 * 1000;
+  const ageMs = Math.max(0, today - dob);
+  const currentAnimalAge = ageMs / MS_PER_YEAR;
+  const currentHumanAge = animalToHumanYears(pet.animalType, currentAnimalAge);
 
-    events.push({ date: birthdayDate, ageYears, humanYears, isPast, isToday, isNext });
+  // Generate milestones for human ages 1, 2, 3, ... up to 2 beyond current age
+  const maxHumanAge = Math.ceil(currentHumanAge) + 2;
+  const allMilestones = [];
+  let nextFound = false;
+
+  for (let H = 1; H <= maxHumanAge; H++) {
+    const animalAgeAtH = humanYearsToAnimalAge(pet.animalType, H);
+    const milestoneDate = new Date(dob.getTime() + animalAgeAtH * MS_PER_YEAR);
+    milestoneDate.setHours(0, 0, 0, 0);
+
+    const isToday = milestoneDate.getTime() === today.getTime();
+    const isPast = !isToday && milestoneDate < today;
+    const isNext = !isPast && !isToday && !nextFound;
+    if (isNext) nextFound = true;
+
+    allMilestones.push({ date: milestoneDate, humanAge: H, isPast, isToday, isNext });
   }
-  return events;
+
+  // Born event (always shown first)
+  const isBornToday = dob.getTime() === today.getTime();
+  const bornEvent = {
+    date: new Date(dob),
+    humanAge: 0,
+    isPast: !isBornToday && dob < today,
+    isToday: isBornToday,
+    isNext: false,
+  };
+
+  // Limit past milestones to last TIMELINE_MAX_PAST to keep the list manageable
+  const pastMilestones = allMilestones.filter(e => e.isPast);
+  const nonPastMilestones = allMilestones.filter(e => !e.isPast);
+  const recentPast = pastMilestones.slice(-TIMELINE_MAX_PAST);
+
+  return [bornEvent, ...recentPast, ...nonPastMilestones];
 }
 
 function renderBirthdayTimeline(pets) {
@@ -478,8 +565,7 @@ function renderBirthdayTimeline(pets) {
 
       const icon = ev.isToday ? '🎉' : ev.isPast ? '✓' : '🎂';
       const dateStr = ev.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-      const ageLabel = ev.ageYears === 0 ? 'Born' : `Age ${ev.ageYears}`;
-      const humanLabel = ev.ageYears > 0 ? `≈ ${ev.humanYears} human yrs` : '';
+      const ageLabel = ev.humanAge === 0 ? 'Born' : `${ev.humanAge} animal yr${ev.humanAge !== 1 ? 's' : ''}`;
       let badge = '';
       if (ev.isToday) badge = `<span class="timeline-badge today-badge">🎉 Today!</span>`;
       else if (ev.isNext) badge = `<span class="timeline-badge next">Next 🔔</span>`;
@@ -488,7 +574,6 @@ function renderBirthdayTimeline(pets) {
         <span class="timeline-event-icon">${icon}</span>
         <span class="timeline-date">${dateStr}</span>
         <span class="timeline-age">${ageLabel}</span>
-        <span class="timeline-human">${humanLabel}</span>
         ${badge}
       `;
       list.appendChild(item);

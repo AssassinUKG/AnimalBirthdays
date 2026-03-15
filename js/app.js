@@ -459,11 +459,11 @@ function renderCalendar(pets) {
 // ===== Birthday Timeline =====
 // Maximum number of recent past milestones shown in the timeline per pet
 // (Born is always first, the first milestone after birth is always second)
-const TIMELINE_MAX_PAST = 5;
+const TIMELINE_MAX_PAST = 1;
 
 /**
  * Returns an array of human-equivalent age milestone events for a pet,
- * from birth up to the next 3 upcoming milestones.
+ * from birth up to the next 10 upcoming milestones.
  * Each entry: { date, humanAge, isPast, isToday, isNext } or { isGap: true }
  *
  * Instead of showing one birthday per calendar year, this shows the actual
@@ -475,8 +475,8 @@ const TIMELINE_MAX_PAST = 5;
  *   1. Born (original birthdate)
  *   2. The first past milestone right after birth ("one after")
  *   3. A gap indicator (• • •) if milestones were skipped
- *   4. The last TIMELINE_MAX_PAST recent past milestones
- *   5. The next upcoming milestone (marked "Next") plus 2 more future ones
+ *   4. The single most-recent past milestone (one before now)
+ *   5. The next upcoming milestone (marked "Next") plus 9 more future ones
  */
 function getAnimalBirthdayTimeline(pet) {
   const dob = new Date(pet.dob);
@@ -489,8 +489,8 @@ function getAnimalBirthdayTimeline(pet) {
   const currentAnimalAge = ageMs / MS_PER_YEAR;
   const currentHumanAge = animalToHumanYears(pet.animalType, currentAnimalAge);
 
-  // Generate milestones for human ages 1, 2, 3, ... up to 3 beyond current age
-  const maxHumanAge = Math.ceil(currentHumanAge) + 3;
+  // Generate milestones for human ages 1, 2, 3, ... up to 10 beyond current age
+  const maxHumanAge = Math.ceil(currentHumanAge) + 10;
   const allMilestones = [];
   let nextFound = false;
 
@@ -522,7 +522,7 @@ function getAnimalBirthdayTimeline(pet) {
 
   // Always show the first past milestone right after birth ("one after")
   const firstMilestoneAfterBirth = pastMilestones.length > 0 ? pastMilestones[0] : null;
-  // Show the last TIMELINE_MAX_PAST recent past milestones
+  // Show only the single most-recent past milestone (one before now)
   const recentPast = pastMilestones.slice(-TIMELINE_MAX_PAST);
 
   // Build the past section: first milestone + gap (if any) + recent milestones

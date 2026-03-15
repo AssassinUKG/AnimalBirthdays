@@ -457,21 +457,26 @@ function renderCalendar(pets) {
 }
 
 // ===== Birthday Timeline =====
-// Maximum number of past milestones shown in the timeline per pet (Born is always shown first)
+// Maximum number of recent past milestones shown in the timeline per pet
+// (Born is always first, the first milestone after birth is always second)
 const TIMELINE_MAX_PAST = 5;
 
 /**
  * Returns an array of human-equivalent age milestone events for a pet,
- * from birth up to the next 2 upcoming milestones.
- * Each entry: { date, humanAge, isPast, isToday, isNext }
+ * from birth up to the next 3 upcoming milestones.
+ * Each entry: { date, humanAge, isPast, isToday, isNext } or { isGap: true }
  *
  * Instead of showing one birthday per calendar year, this shows the actual
  * calendar dates when the animal reaches each human-equivalent age milestone —
  * so fast-aging animals (e.g. hamsters at 25×) correctly show multiple
  * birthdays within a single calendar year.
  *
- * To keep the list readable, at most the last TIMELINE_MAX_PAST past milestones
- * are included (the Born event is always first).
+ * The timeline always shows:
+ *   1. Born (original birthdate)
+ *   2. The first past milestone right after birth ("one after")
+ *   3. A gap indicator (• • •) if milestones were skipped
+ *   4. The last TIMELINE_MAX_PAST recent past milestones
+ *   5. The next upcoming milestone (marked "Next") plus 2 more future ones
  */
 function getAnimalBirthdayTimeline(pet) {
   const dob = new Date(pet.dob);
@@ -484,8 +489,8 @@ function getAnimalBirthdayTimeline(pet) {
   const currentAnimalAge = ageMs / MS_PER_YEAR;
   const currentHumanAge = animalToHumanYears(pet.animalType, currentAnimalAge);
 
-  // Generate milestones for human ages 1, 2, 3, ... up to 2 beyond current age
-  const maxHumanAge = Math.ceil(currentHumanAge) + 2;
+  // Generate milestones for human ages 1, 2, 3, ... up to 3 beyond current age
+  const maxHumanAge = Math.ceil(currentHumanAge) + 3;
   const allMilestones = [];
   let nextFound = false;
 
@@ -512,12 +517,24 @@ function getAnimalBirthdayTimeline(pet) {
     isNext: false,
   };
 
-  // Limit past milestones to last TIMELINE_MAX_PAST to keep the list manageable
   const pastMilestones = allMilestones.filter(e => e.isPast);
   const nonPastMilestones = allMilestones.filter(e => !e.isPast);
+
+  // Always show the first past milestone right after birth ("one after")
+  const firstMilestoneAfterBirth = pastMilestones.length > 0 ? pastMilestones[0] : null;
+  // Show the last TIMELINE_MAX_PAST recent past milestones
   const recentPast = pastMilestones.slice(-TIMELINE_MAX_PAST);
 
-  return [bornEvent, ...recentPast, ...nonPastMilestones];
+  // Build the past section: first milestone + gap (if any) + recent milestones
+  let pastSection;
+  if (firstMilestoneAfterBirth && !recentPast.includes(firstMilestoneAfterBirth)) {
+    // There are hidden milestones between firstMilestoneAfterBirth and recentPast — add a gap indicator
+    pastSection = [firstMilestoneAfterBirth, { isGap: true }, ...recentPast];
+  } else {
+    pastSection = recentPast; // firstMilestoneAfterBirth is already within the recent window
+  }
+
+  return [bornEvent, ...pastSection, ...nonPastMilestones];
 }
 
 function renderBirthdayTimeline(pets) {
@@ -559,6 +576,15 @@ function renderBirthdayTimeline(pets) {
     list.className = 'timeline-events';
 
     events.forEach(ev => {
+      // Gap indicator between first-after-birth and recent past milestones
+      if (ev.isGap) {
+        const gapEl = document.createElement('div');
+        gapEl.className = 'timeline-gap';
+        gapEl.innerHTML = `<span class="timeline-gap-dots">• • •</span>`;
+        list.appendChild(gapEl);
+        return;
+      }
+
       const stateClass = ev.isToday ? 'today' : ev.isPast ? 'past' : 'upcoming';
       const item = document.createElement('div');
       item.className = `timeline-event ${stateClass}`;

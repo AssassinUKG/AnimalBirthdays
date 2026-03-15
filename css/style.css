@@ -7,11 +7,11 @@
   --secondary-dark: #5aafcc;
   --accent: #ffd166;
   --accent-dark: #f0bc40;
-  --bg: #fdf6f0;
+  --bg: #f0fdfa;
   --card-bg: #ffffff;
-  --text: #3d2c2c;
-  --text-muted: #8a6f6f;
-  --border: #f0ddd5;
+  --text: #1a3a38;
+  --text-muted: #5f8a84;
+  --border: #ccfbf1;
   --success: #6bcb77;
   --danger: #ff6b6b;
   --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
@@ -521,7 +521,7 @@ body {
 }
 
 .calendar-day.today {
-  background: #fff8f0;
+  background: #f0fdfa;
 }
 
 .calendar-day.today .day-number {

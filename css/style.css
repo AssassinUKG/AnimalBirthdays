@@ -1,8 +1,8 @@
 /* ===== Animal Birthdays App - Styles ===== */
 
 :root {
-  --primary: #ff7eb3;
-  --primary-dark: #e05fa0;
+  --primary: #14b8a6;
+  --primary-dark: #0d9488;
   --secondary: #7ec8e3;
   --secondary-dark: #5aafcc;
   --accent: #ffd166;
@@ -37,7 +37,7 @@ body {
 
 /* ===== Header ===== */
 .app-header {
-  background: linear-gradient(135deg, #ff7eb3 0%, #ff9a9e 50%, #fecfef 100%);
+  background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 50%, #99f6e4 100%);
   padding: 2.5rem 1.5rem;
   text-align: center;
   position: relative;
@@ -169,7 +169,7 @@ body {
 .form-group select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(255, 126, 179, 0.15);
+  box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.15);
   background: white;
 }
 
@@ -204,12 +204,12 @@ body {
 .btn-primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: white;
-  box-shadow: 0 4px 15px rgba(255, 126, 179, 0.4);
+  box-shadow: 0 4px 15px rgba(20, 184, 166, 0.4);
 }
 
 .btn-primary:hover {
   filter: brightness(1.05);
-  box-shadow: 0 6px 20px rgba(255, 126, 179, 0.5);
+  box-shadow: 0 6px 20px rgba(20, 184, 166, 0.5);
   transform: translateY(-1px);
 }
 
@@ -537,12 +537,12 @@ body {
 }
 
 .calendar-day.has-birthday {
-  background: #fff0f8;
+  background: #f0fdfa;
   cursor: pointer;
 }
 
 .calendar-day.has-birthday:hover {
-  background: #ffe0f0;
+  background: #ccfbf1;
 }
 
 .day-number {
@@ -575,7 +575,7 @@ body {
 }
 
 .day-event.actual-birthday {
-  background: linear-gradient(135deg, #ff7eb3, #ff9e5e);
+  background: linear-gradient(135deg, #14b8a6, #f97316);
   color: white;
 }
 
@@ -607,7 +607,7 @@ body {
 }
 
 .legend-dot.actual {
-  background: linear-gradient(135deg, #ff7eb3, #ff9e5e);
+  background: linear-gradient(135deg, #14b8a6, #f97316);
 }
 
 .legend-dot.human {
@@ -754,3 +754,138 @@ body {
 .paw-bg:nth-child(2) { top: 20%; right: 3%; transform: rotate(15deg); }
 .paw-bg:nth-child(3) { bottom: 10%; left: 8%; transform: rotate(10deg); }
 .paw-bg:nth-child(4) { bottom: 25%; right: 6%; transform: rotate(-30deg); }
+
+/* ===== Birthday Timeline ===== */
+.timeline-pets {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.timeline-pet {
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.timeline-pet-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  font-size: 1rem;
+}
+
+.timeline-pet-header .timeline-emoji {
+  font-size: 1.4rem;
+}
+
+.timeline-pet-header .timeline-species {
+  font-size: 0.8rem;
+  opacity: 0.85;
+  margin-left: 0.2rem;
+}
+
+.timeline-events {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-event {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  transition: background var(--transition);
+}
+
+.timeline-event:last-child {
+  border-bottom: none;
+}
+
+.timeline-event.past {
+  opacity: 0.65;
+  background: var(--bg);
+}
+
+.timeline-event.past:hover {
+  opacity: 1;
+  background: #f0fdfa;
+}
+
+.timeline-event.today {
+  background: linear-gradient(90deg, #f0fdfa, #ccfbf1);
+  font-weight: 700;
+  border-left: 4px solid var(--primary);
+}
+
+.timeline-event.upcoming {
+  background: white;
+}
+
+.timeline-event.upcoming:hover {
+  background: #f0fdfa;
+}
+
+.timeline-event-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  width: 22px;
+  text-align: center;
+}
+
+.timeline-date {
+  font-weight: 600;
+  color: var(--text);
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.timeline-age {
+  color: var(--primary-dark);
+  font-weight: 700;
+  flex-shrink: 0;
+  min-width: 60px;
+}
+
+.timeline-human {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.timeline-badge {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.timeline-badge.next {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #7a4f00;
+}
+
+.timeline-badge.today-badge {
+  background: linear-gradient(135deg, var(--success), #45b355);
+  color: white;
+}
+
+@media (max-width: 640px) {
+  .timeline-date {
+    min-width: 90px;
+    font-size: 0.8rem;
+  }
+  .timeline-age {
+    min-width: 44px;
+    font-size: 0.8rem;
+  }
+  .timeline-human {
+    display: none;
+  }
+}

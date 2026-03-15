@@ -281,26 +281,30 @@ function getGoogleCalendarURL(name, dob, animalType) {
 let calendarDate = new Date();
 
 function getBirthdaysForMonth(pets, year, month) {
-  // Returns an object: { [day]: [{pet, type: 'actual'|'human'}] }
+  // Returns an object: { [day]: [{pet, type: 'actual'|'human', ageYears}] }
   const map = {};
   pets.forEach(pet => {
     const dob = new Date(pet.dob);
+    const dobYear = dob.getFullYear();
+    const dobMonth = dob.getMonth();
+    const dobDay = dob.getDate();
 
-    // Actual birthday this month
-    if (dob.getMonth() === month) {
-      const d = dob.getDate();
+    // Actual birthday: show in birth month for every year from birth year onwards
+    if (dobMonth === month && year >= dobYear) {
+      const d = dobDay;
       if (!map[d]) map[d] = [];
-      map[d].push({ pet, type: 'actual' });
+      const ageYears = year - dobYear;
+      map[d].push({ pet, type: 'actual', ageYears });
     }
 
-    // Human equivalent birthday this month
+    // Human equivalent birthday this month (recurring annually)
     const humanBirthday = getHumanEquivalentBirthday(pet.animalType, pet.dob);
     if (humanBirthday.getMonth() === month) {
       const d = humanBirthday.getDate();
       if (!map[d]) map[d] = [];
-      // Only add if not already an actual birthday same pet same day
+      // Only add if not already a human birthday for same pet same day
       const isDupe = map[d].some(e => e.pet.id === pet.id && e.type === 'human');
-      if (!isDupe) map[d].push({ pet, type: 'human' });
+      if (!isDupe) map[d].push({ pet, type: 'human', ageYears: null });
     }
   });
   return map;
@@ -358,14 +362,20 @@ function renderCalendar(pets) {
       eventsContainer.className = 'day-events';
 
       // Limit display to 3 events per day to avoid overflow
-      birthdayMap[d].slice(0, 3).forEach(({ pet, type }) => {
+      birthdayMap[d].slice(0, 3).forEach(({ pet, type, ageYears }) => {
         const ev = document.createElement('div');
         ev.className = `day-event ${type === 'actual' ? 'actual-birthday' : 'human-birthday'}`;
         const emoji = getAnimalEmoji(pet.animalType);
-        ev.textContent = `${emoji} ${pet.name}`;
-        ev.title = type === 'actual'
-          ? `${pet.name}'s actual birthday!`
-          : `${pet.name}'s human-equivalent birthday`;
+        if (type === 'actual') {
+          const ageLabel = ageYears === 0 ? '🎉' : `${ageYears}yr`;
+          ev.textContent = `${emoji} ${pet.name} (${ageLabel})`;
+          ev.title = ageYears === 0
+            ? `${pet.name} was born!`
+            : `${pet.name}'s ${ageYears}-year birthday!`;
+        } else {
+          ev.textContent = `${emoji} ${pet.name}`;
+          ev.title = `${pet.name}'s human-equivalent birthday`;
+        }
         eventsContainer.appendChild(ev);
       });
 
@@ -394,6 +404,101 @@ function renderCalendar(pets) {
     dayEl.appendChild(dayNum);
     daysContainer.appendChild(dayEl);
   }
+}
+
+// ===== Birthday Timeline =====
+/**
+ * Returns an array of yearly birthday events for a pet from birth to today+1 year.
+ * Each entry: { date, ageYears, humanYears, isPast, isToday, isNext }
+ */
+function getAnimalBirthdayTimeline(pet) {
+  const dob = new Date(pet.dob);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dobYear = dob.getFullYear();
+  const currentYear = today.getFullYear();
+
+  const events = [];
+  // Show from birth year through current year + 1 (next upcoming)
+  for (let year = dobYear; year <= currentYear + 1; year++) {
+    const birthdayDate = new Date(year, dob.getMonth(), dob.getDate());
+    const ageYears = year - dobYear;
+    const humanYears = Math.round(animalToHumanYears(pet.animalType, ageYears));
+    const isToday = birthdayDate.getTime() === today.getTime();
+    const isPast = birthdayDate < today && !isToday;
+    const isNext = !isPast && !isToday && year === currentYear + 1;
+
+    events.push({ date: birthdayDate, ageYears, humanYears, isPast, isToday, isNext });
+  }
+  return events;
+}
+
+function renderBirthdayTimeline(pets) {
+  const container = document.getElementById('birthday-timeline');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (pets.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon">🗓️</span>
+        <p>Add pets above to see their birthday timeline across the years!</p>
+      </div>
+    `;
+    return;
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'timeline-pets';
+
+  pets.forEach(pet => {
+    const events = getAnimalBirthdayTimeline(pet);
+    const emoji = getAnimalEmoji(pet.animalType);
+    const animalLabel = getAnimalLabel(pet.animalType);
+
+    const section = document.createElement('div');
+    section.className = 'timeline-pet';
+
+    const header = document.createElement('div');
+    header.className = 'timeline-pet-header';
+    header.innerHTML = `
+      <span class="timeline-emoji">${emoji}</span>
+      <strong>${escapeHtml(pet.name)}</strong>
+      <span class="timeline-species">(${animalLabel})</span>
+    `;
+    section.appendChild(header);
+
+    const list = document.createElement('div');
+    list.className = 'timeline-events';
+
+    events.forEach(ev => {
+      const stateClass = ev.isToday ? 'today' : ev.isPast ? 'past' : 'upcoming';
+      const item = document.createElement('div');
+      item.className = `timeline-event ${stateClass}`;
+
+      const icon = ev.isToday ? '🎉' : ev.isPast ? '✓' : '🎂';
+      const dateStr = ev.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      const ageLabel = ev.ageYears === 0 ? 'Born' : `Age ${ev.ageYears}`;
+      const humanLabel = ev.ageYears > 0 ? `≈ ${ev.humanYears} human yrs` : '';
+      let badge = '';
+      if (ev.isToday) badge = `<span class="timeline-badge today-badge">🎉 Today!</span>`;
+      else if (ev.isNext) badge = `<span class="timeline-badge next">Next 🔔</span>`;
+
+      item.innerHTML = `
+        <span class="timeline-event-icon">${icon}</span>
+        <span class="timeline-date">${dateStr}</span>
+        <span class="timeline-age">${ageLabel}</span>
+        <span class="timeline-human">${humanLabel}</span>
+        ${badge}
+      `;
+      list.appendChild(item);
+    });
+
+    section.appendChild(list);
+    wrapper.appendChild(section);
+  });
+
+  container.appendChild(wrapper);
 }
 
 // ===== Pet Card Rendering =====
@@ -516,6 +621,7 @@ function handleAddPet(e) {
   const pets = addPet({ name, animalType, dob });
   renderPets(pets);
   renderCalendar(pets);
+  renderBirthdayTimeline(pets);
 
   document.getElementById('pet-form').reset();
   showToast(`${getAnimalEmoji(animalType)} ${name} added! 🎉`);
@@ -529,6 +635,7 @@ function handleDeletePet(id) {
   const pets = removePet(id);
   renderPets(pets);
   renderCalendar(pets);
+  renderBirthdayTimeline(pets);
   showToast('Pet removed.');
 }
 
@@ -578,6 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const pets = loadPets();
   renderPets(pets);
   renderCalendar(pets);
+  renderBirthdayTimeline(pets);
 
   // Set max date for DOB to today
   const dobInput = document.getElementById('pet-dob');
